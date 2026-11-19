@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import L from 'leaflet'
 
-const CENTER = [28.4595, 77.0466] // Sector 30, Gurgaon (approx.)
+const CENTER = [28.4615, 77.0535] // Sector 30, Gurgaon (DLF Star Mall area)
 
 function pin(pg, active) {
   const label = pg.verified
@@ -39,7 +39,7 @@ export default function MapView({ pgs, activeId, onSelect, height = '100%', sing
       pts.push([p.lat, p.lng])
     })
     if (single && pts.length) map.current.setView(pts[0], 16)
-    else if (pts.length > 1) map.current.fitBounds(pts, { padding: [30, 30], maxZoom: 17 })
+    else if (pts.length > 1) map.current.setView(CENTER, 16)
   }, [pgs, activeId, onSelect, single])
 
   return <div ref={el} className="map" style={{ height }} />

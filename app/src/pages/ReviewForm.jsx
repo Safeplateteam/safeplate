@@ -26,7 +26,7 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
           <p className="muted">Which PG do you live in?</p>
           <input className="input" autoFocus placeholder="Search PG name…" value={pick} onChange={e => setPick(e.target.value)} />
           <div className="pick-list">
-            {(pgs || []).filter(p => !t || p.name.toLowerCase().includes(t)).slice(0, 30).map(p => (
+            {(pgs || []).filter(p => !t || p.name.toLowerCase().includes(t)).sort((a, b) => b.verified - a.verified || a.name.localeCompare(b.name)).slice(0, 40).map(p => (
               <button key={p.id} className="pick" onClick={() => go('/review/' + p.id)}>
                 <b>{p.name}</b><small>{p.address || (p.sector && 'Sector ' + p.sector)}</small>
               </button>
