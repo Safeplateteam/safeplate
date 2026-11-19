@@ -259,3 +259,5 @@ textarea.input { resize: vertical; }
 
 .leaflet-control-attribution { font-size: 9px !important; }
 @media (min-width: 561px) { #root { box-shadow: 0 0 0 1px var(--line); } }
+
+.pre { white-space: pre-line; }

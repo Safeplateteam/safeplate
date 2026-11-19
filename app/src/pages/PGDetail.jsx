@@ -133,7 +133,7 @@ export default function PGDetail({ pg, loading }) {
                   <div className="avatar grey">{(w.author || '?')[0]}</div>
                   <div><b>{w.author || 'Anonymous'}</b><small><Stars value={w.rating} /> {w.posted}</small></div>
                 </div>
-                {w.body && <p>{w.body}</p>}
+                {w.body && <p className="pre">{w.body.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')}</p>}
                 {w.photos?.length > 0 && <div className="thumbs">{w.photos.map(u => <img key={u} src={u} alt="" referrerPolicy="no-referrer" />)}</div>}
               </div>
             ))}

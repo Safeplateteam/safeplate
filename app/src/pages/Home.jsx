@@ -31,7 +31,9 @@ export default function Home({ pgs, err }) {
   }, [pgs, q, f])
 
   const verified = list.filter(p => p.verified)
-  const others = list.filter(p => !p.verified)
+  // rank web listings by a confidence-weighted rating so a single 5★ review doesn't top the list
+  const conf = (p) => ((p.web_rating || 0) * (p.web_review_count || 0) + 3.5 * 8) / ((p.web_review_count || 0) + 8)
+  const others = list.filter(p => !p.verified).sort((a, b) => conf(b) - conf(a))
 
   return (
     <div className="page home">
