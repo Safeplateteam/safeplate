@@ -1,0 +1,46 @@
+name: Build Android APK
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/apk.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: apk, cancel-in-progress: true }
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: app/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Build web + wrap in Android (Capacitor)
+        working-directory: app
+        run: |
+          npm ci
+          npm run build
+          npm i --no-save @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/assets
+          npx cap add android
+          npx @capacitor/assets generate --android || echo "icon generation skipped"
+          npx cap sync android
+      - name: Gradle build (debug APK, installable by sharing the file)
+        working-directory: app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon -q
+          cp app/build/outputs/apk/debug/app-debug.apk ../../SafePlate.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: SafePlate-apk, path: SafePlate.apk }
+      - name: Publish as "latest" download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: SafePlate app (latest build)
+          body: |
+            Download **SafePlate.apk** below and open it on an Android phone.
+            If Android asks, allow "Install unknown apps" for your browser / WhatsApp.
+            Build: ${{ github.sha }}
+          files: SafePlate.apk
+          make_latest: true

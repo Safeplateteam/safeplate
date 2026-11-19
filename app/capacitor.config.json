@@ -1,0 +1,7 @@
+{
+  "appId": "in.safeplate.app",
+  "appName": "SafePlate",
+  "webDir": "dist",
+  "android": { "allowMixedContent": false },
+  "server": { "androidScheme": "https" }
+}

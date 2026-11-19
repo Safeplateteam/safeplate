@@ -1,0 +1,133 @@
+import React, { useEffect, useState } from 'react'
+import { submitReview, uploadPhoto, track } from '../lib/api.js'
+import { PILLARS } from '../lib/constants.js'
+import { StarsInput, VerifiedBadge } from '../components/ui.jsx'
+import { go } from '../App.jsx'
+
+const LABELS = ['', 'Very bad', 'Bad', 'Okay', 'Good', 'Excellent']
+
+export default function ReviewForm({ pg, pgs, code, onDone }) {
+  const [pick, setPick] = useState('')
+  const [r, setR] = useState({ food: 0, hygiene: 0, amenities: 0, security: 0, issues: [], comment: '', name: '', phone: '', months_stayed: '' })
+  const [photos, setPhotos] = useState([])
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [done, setDone] = useState(false)
+
+  useEffect(() => { track('review_start', pg?.id || null, { qr: !!code }) }, [pg, code])
+
+  // no PG chosen yet → let them pick one
+  if (!pg) {
+    const t = pick.toLowerCase()
+    return (
+      <div className="page">
+        <header className="top simple"><button className="icon-btn" onClick={() => go('/')}>‹</button><b>Rate your PG</b><span /></header>
+        <div className="pad">
+          <p className="muted">Which PG do you live in?</p>
+          <input className="input" autoFocus placeholder="Search PG name…" value={pick} onChange={e => setPick(e.target.value)} />
+          <div className="pick-list">
+            {(pgs || []).filter(p => !t || p.name.toLowerCase().includes(t)).slice(0, 30).map(p => (
+              <button key={p.id} className="pick" onClick={() => go('/review/' + p.id)}>
+                <b>{p.name}</b><small>{p.address || (p.sector && 'Sector ' + p.sector)}</small>
+              </button>
+            ))}
+          </div>
+          <p className="muted small">Can't find your PG? Tell the SafePlate team and we'll add it.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (done) return (
+    <div className="page center">
+      <div className="done">
+        <div className="done-icon">🎉</div>
+        <h2>Thank you!</h2>
+        <p>Your review of <b>{pg.name}</b> is live. You just helped someone moving to Gurgaon pick a safer PG.</p>
+        <button className="btn btn-primary btn-block" onClick={() => go('/pg/' + pg.id)}>See the PG page</button>
+        <button className="btn btn-ghost btn-block" onClick={() => go('/')}>Explore other PGs</button>
+      </div>
+    </div>
+  )
+
+  const set = (k, v) => setR({ ...r, [k]: v })
+  const toggleIssue = (k) => set('issues', r.issues.includes(k) ? r.issues.filter(x => x !== k) : [...r.issues, k])
+  const ready = PILLARS.every(p => r[p.key] > 0) && r.name.trim().length >= 2 && /^[6-9]\d{9}$/.test(r.phone.replace(/\D/g, '').slice(-10))
+
+  const addPhotos = async (files) => {
+    setErr('')
+    for (const f of [...files].slice(0, 4 - photos.length)) {
+      try { const url = await uploadPhoto(f); setPhotos(p => [...p, url]) } catch (x) { setErr(x.message) }
+    }
+  }
+
+  const send = async (e) => {
+    e.preventDefault()
+    if (!ready) { setErr('Please rate all four sections and add your name and a valid mobile number.'); return }
+    setBusy(true); setErr('')
+    try {
+      await submitReview({
+        pg_id: pg.id, qr: code || null, name: r.name.trim(), phone: r.phone.replace(/\D/g, '').slice(-10),
+        food: r.food, hygiene: r.hygiene, amenities: r.amenities, security: r.security,
+        issues: r.issues, comment: r.comment.trim() || null, photos, months_stayed: r.months_stayed ? Number(r.months_stayed) : null,
+      })
+      track('review_submit', pg.id, { qr: !!code, photos: photos.length, issues: r.issues.length })
+      onDone && onDone(); setDone(true); window.scrollTo(0, 0)
+    } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="page review-page">
+      <header className="top simple"><button className="icon-btn" onClick={() => go('/pg/' + pg.id)}>‹</button><b>Rate your PG</b><span /></header>
+      <form className="pad form" onSubmit={send}>
+        <div className="review-pg">
+          <h2>{pg.name}</h2>
+          {pg.verified && <VerifiedBadge small />}
+          {code && <div className="notice ok small">📍 You scanned this PG's SafePlate poster. Your review will be tagged as a <b>Resident</b> review.</div>}
+        </div>
+
+        {PILLARS.map(p => (
+          <div key={p.key} className="rate-block" style={{ '--c': p.color }}>
+            <div className="rate-head"><span>{p.icon}</span><div><b>{p.label}</b><small>{p.question}</small></div></div>
+            <StarsInput value={r[p.key]} onChange={v => set(p.key, v)} />
+            <div className="rate-label">{LABELS[r[p.key]] || 'Tap to rate'}</div>
+            <div className="issue-pick">
+              <small>Any problems? (tap all that apply)</small>
+              <div>
+                {p.issues.map(([k, l]) => (
+                  <button type="button" key={k} className={'chip small' + (r.issues.includes(k) ? ' on bad' : '')} onClick={() => toggleIssue(k)}>{l}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <label>Anything else people should know? (optional)
+          <textarea className="input" rows={3} maxLength={800} value={r.comment} onChange={e => set('comment', e.target.value)}
+            placeholder="e.g. Paneer every day, RO not serviced, owner fixes things fast…" />
+        </label>
+
+        <div className="photo-pick">
+          <b>Add photos</b><small>Food, kitchen, room — real photos make reviews trusted (max 4)</small>
+          <div className="thumbs">
+            {photos.map(u => <img key={u} src={u} alt="" />)}
+            {photos.length < 4 && (
+              <label className="add-photo">＋<input type="file" accept="image/*" multiple hidden onChange={e => addPhotos(e.target.files)} /></label>
+            )}
+          </div>
+        </div>
+
+        <div className="two">
+          <label>Your name<input className="input" required maxLength={40} placeholder="e.g. Rahul S." value={r.name} onChange={e => set('name', e.target.value)} /></label>
+          <label>Months stayed<input className="input" inputMode="numeric" maxLength={3} value={r.months_stayed} onChange={e => set('months_stayed', e.target.value.replace(/\D/g, ''))} /></label>
+        </div>
+        <label>Mobile number<input className="input" required inputMode="numeric" placeholder="10-digit mobile" value={r.phone} onChange={e => set('phone', e.target.value)} />
+          <small className="muted">Only used to stop fake and duplicate reviews. Never shown publicly.</small>
+        </label>
+
+        {err && <div className="notice error">{err}</div>}
+        <button className="btn btn-primary btn-block btn-lg" disabled={busy}>{busy ? 'Posting…' : 'Post review'}</button>
+      </form>
+    </div>
+  )
+}
