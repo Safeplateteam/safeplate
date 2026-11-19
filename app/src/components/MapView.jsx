@@ -21,9 +21,8 @@ export default function MapView({ pgs, activeId, onSelect, height = '100%', sing
 
   useEffect(() => {
     map.current = L.map(el.current, { zoomControl: false, attributionControl: true }).setView(CENTER, 15)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19, subdomains: 'abcd',
-      attribution: '© OpenStreetMap · © CARTO',
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '© OpenStreetMap contributors',
     }).addTo(map.current)
     layer.current = L.layerGroup().addTo(map.current)
     return () => map.current.remove()
@@ -40,7 +39,7 @@ export default function MapView({ pgs, activeId, onSelect, height = '100%', sing
       pts.push([p.lat, p.lng])
     })
     if (single && pts.length) map.current.setView(pts[0], 16)
-    else if (pts.length > 1) map.current.fitBounds(pts, { padding: [40, 40], maxZoom: 16 })
+    else if (pts.length > 1) map.current.fitBounds(pts, { padding: [30, 30], maxZoom: 17 })
   }, [pgs, activeId, onSelect, single])
 
   return <div ref={el} className="map" style={{ height }} />
