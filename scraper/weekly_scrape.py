@@ -35,9 +35,13 @@ def http(method, url, body=None, headers=None, timeout=120):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method,
                                  headers={"Content-Type": "application/json", **(headers or {})})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        txt = r.read().decode()
-        return json.loads(txt) if txt else None
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            txt = r.read().decode()
+            return json.loads(txt) if txt else None
+    except urllib.error.HTTPError as e:
+        e.msg = f"{e.msg} — {url.split('?')[0]} — {e.read().decode(errors='replace')[:400]}"
+        raise
 
 
 def rpc(fn, args):
@@ -185,7 +189,9 @@ def main():
             n = rpc("scraper_import", {"k": KEY, "area_id": area["id"], "mode": mode, "items": rows})
             found += n; done += 1
             print(f"  {status}: {len(items)} results → {n} PGs saved")
-        except Exception as e:  # keep going with the next area
+        except urllib.error.HTTPError as e:  # keep going with the next area
+            print(f"  failed: HTTP {e.code} {e.msg}")
+        except Exception as e:
             print(f"  failed: {e}")
         used = credit()[0]
     print(f"Done: {done} areas, {found} PGs saved, ${used - start_used:.2f} spent this run, ${limit - used:.2f} left this month.")
