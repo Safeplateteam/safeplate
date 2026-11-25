@@ -20,6 +20,7 @@ TOKEN = os.environ.get("APIFY_TOKEN", "").strip()
 KEY = os.environ.get("SCRAPER_KEY", "").strip()
 MAX_AREAS = int(os.environ.get("MAX_AREAS", "40"))
 DRY = os.environ.get("DRY_RUN") == "1"
+FREE_CREDIT = float(os.environ.get("MONTHLY_BUDGET_USD", "5"))  # Apify free plan credit; never plan beyond it
 
 GURGAON = (28.33, 28.57, 76.88, 77.17)  # lat min/max, lng min/max
 PG_WORDS = re.compile(r"\b(pg|p\.g|paying guest|hostel|co-?living|coliving|stay|stays|homestay|dorm|dormitory|"
@@ -58,7 +59,7 @@ def apify(method, path, body=None, **params):
 def credit():
     d = apify("GET", "/users/me/limits")["data"]
     used = float(d["current"]["monthlyUsageUsd"])
-    limit = float(d["limits"]["maxMonthlyUsageUsd"])
+    limit = min(float(d["limits"]["maxMonthlyUsageUsd"]), FREE_CREDIT)
     end = d.get("monthlyUsageCycle", {}).get("endAt")
     days_left = 30
     if end:
