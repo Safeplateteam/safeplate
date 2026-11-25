@@ -17,7 +17,7 @@ export function km(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
-export default function Home({ pgs, err, user, onSignOut }) {
+export default function Home({ pgs, err, user, onSignOut, openOwner, onOwnerShown, onHome }) {
   const [q, setQ] = useState('')
   const [f, setF] = useState(new Set())
   const [view, setView] = useState('list')
@@ -26,6 +26,7 @@ export default function Home({ pgs, err, user, onSignOut }) {
   const [shown, setShown] = useState(PAGE)
   const [ask, setAsk] = useState(false)
   const [owner, setOwner] = useState(false)
+  useEffect(() => { if (openOwner) { setOwner(true); onOwnerShown && onOwnerShown() } }, [openOwner]) // eslint-disable-line
   const [toast, setToast] = useState('')
   const flash = (m) => { setToast(m); setTimeout(() => setToast(''), 3500) }
 
@@ -65,7 +66,7 @@ export default function Home({ pgs, err, user, onSignOut }) {
   return (
     <div className="page home">
       <header className="top">
-        <div className="brand">
+        <div className="brand" onClick={onHome} style={{ cursor: 'pointer' }}>
           <img src="./icon.svg" alt="" />
           <div><b>SafePlate</b><small>PG Trust Score · Gurgaon</small></div>
         </div>

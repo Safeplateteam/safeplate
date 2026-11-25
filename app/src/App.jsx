@@ -6,7 +6,7 @@ import PGDetail from './pages/PGDetail.jsx'
 import ReviewForm from './pages/ReviewForm.jsx'
 import Admin from './pages/Admin.jsx'
 import Poster from './pages/Poster.jsx'
-import Welcome from './components/Welcome.jsx'
+import Landing from './components/Landing.jsx'
 
 // tiny hash router: #/  #/pg/:id  #/review/:id?code=  #/admin  #/poster/:id
 function parse() {
@@ -21,7 +21,16 @@ export default function App() {
   const [route, setRoute] = useState(parse())
   const [pgs, setPgs] = useState(null)
   const [err, setErr] = useState(null)
-  const [welcomed, setWelcomed] = useState(() => { try { return !!localStorage.getItem('sp_persona') } catch { return true } })
+  // landing screen shows on every app open; QR-poster review links go straight to the form
+  const [entered, setEntered] = useState(() => parse().name === 'review')
+  const [openOwner, setOpenOwner] = useState(false)
+  const choose = (persona) => {
+    try { localStorage.setItem('sp_persona', persona) } catch {}
+    track('persona', null, { persona })
+    setEntered(true)
+    if (persona === 'resident') go('/review')
+    else { go('/'); if (persona === 'owner') setOpenOwner(true) }
+  }
 
   const [user, setUser] = useState(undefined) // undefined = checking, null = signed out
   useEffect(() => { currentUser().then(setUser) }, [])
@@ -39,20 +48,14 @@ export default function App() {
   if (route.name === 'admin') return <Admin pgs={pgs} refresh={refresh} />
   if (route.name === 'poster') return <Poster pgs={pgs} id={route.id} />
   if (user === undefined) return <div className="page center"><img src="./icon.svg" alt="" style={{ width: 64, opacity: .8 }} /></div>
+  if (!entered) return <Landing pgs={pgs} user={user} onChoose={choose} />
   if (!user) return <Login onDone={setUser} />
 
   const pg = route.id && pgs ? pgs.find(p => p.id === route.id) : null
   let page
   if (route.name === 'pg') page = <PGDetail pg={pg} loading={!pgs} />
   else if (route.name === 'review') page = <ReviewForm pg={pg} pgs={pgs} code={route.query.code} onDone={refresh} />
-  else page = <Home pgs={pgs} err={err} user={user} onSignOut={async () => { await signOutEmail(); setUser(null) }} />
+  else page = <Home pgs={pgs} err={err} user={user} openOwner={openOwner} onOwnerShown={() => setOpenOwner(false)} onHome={() => setEntered(false)} onSignOut={async () => { await signOutEmail(); setUser(null); setEntered(false) }} />
 
-  // residents arriving through a QR poster skip the welcome screen
-  const showWelcome = !welcomed && route.name !== 'review'
-  return (
-    <>
-      {page}
-      {showWelcome && <Welcome onDone={() => setWelcomed(true)} />}
-    </>
-  )
+  return page
 }
