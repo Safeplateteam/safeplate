@@ -28,7 +28,8 @@ PG_WORDS = re.compile(r"\b(pg|p\.g|paying guest|hostel|co-?living|coliving|stay|
                       r"colive|housr|settl|your-?space)\b", re.I)
 NOT_PG = re.compile(r"\b(restaurant|cafe|school|hospital|clinic|bank|atm|temple|mandir|gym|salon|store|shop|"
                     r"pharmacy|petrol|college|coaching|office|real estate|property dealer|builder)\b", re.I)
-CAP = {"basic": 0.12, "full": 0.40}  # max $ per area run
+EST = {"basic": 0.09, "full": 0.45}  # estimated $ per area (used to size each weekly batch)
+MIN_RUN = 0.50  # Apify minimum "max cost" per run
 
 
 def http(method, url, body=None, headers=None, timeout=120):
@@ -86,10 +87,14 @@ def plan(areas):
     return out
 
 
-def actor_input(area, mode):
-    name = area["name"]
+def searches(area, mode):
+    n = area["name"]
+    return [f"PG in {n} Gurgaon"] + ([f"paying guest {n} Gurugram"] if mode == "full" else [])
+
+
+def actor_input(areas, mode):
     base = {
-        "searchStringsArray": [f"PG in {name} Gurgaon"] + ([f"paying guest {name} Gurugram"] if mode == "full" else []),
+        "searchStringsArray": [q for a in areas for q in searches(a, mode)],
         "locationQuery": "Gurugram, Haryana, India",
         "maxCrawledPlacesPerSearch": 20 if mode == "basic" else 15,
         "language": "en", "skipClosedPlaces": True, "includeWebResults": False,
@@ -146,8 +151,8 @@ def clean(items, mode):
     return list(out.values())
 
 
-def run_area(area, mode, cap):
-    run = apify("POST", f"/acts/{ACTOR}/runs", actor_input(area, mode), maxTotalChargeUsd=f"{cap:.2f}", waitForFinish=60)["data"]
+def run_batch(areas, mode, cap):
+    run = apify("POST", f"/acts/{ACTOR}/runs", actor_input(areas, mode), maxTotalChargeUsd=f"{cap:.2f}", waitForFinish=60)["data"]
     while run["status"] in ("READY", "RUNNING"):
         run = apify("GET", f"/actor-runs/{run['id']}", waitForFinish=60)["data"]
     items = apify("GET", f"/datasets/{run['defaultDatasetId']}/items", clean="true", format="json") or []
@@ -173,29 +178,44 @@ def main():
 
     queue = plan(rpc("scraper_areas", {"k": KEY}))
     print(f"{len(queue)} areas in rotation")
-    start_used, done, found = used, 0, 0
-    for area, mode in queue[:MAX_AREAS]:
-        spent = used - start_used
-        left = budget - spent
-        if left < CAP["basic"] * 0.5 or (mode == "full" and left < 0.15):
-            print(f"Run budget reached (${spent:.2f} spent)."); break
-        cap = min(CAP[mode], left)
-        print(f"→ {area['name']} [{mode}] cap ${cap:.2f}", flush=True)
-        if DRY:
-            done += 1; continue
-        try:
-            status, items = run_area(area, mode, cap)
-            rows = clean(items, mode)
-            n = rpc("scraper_import", {"k": KEY, "area_id": area["id"], "mode": mode, "items": rows})
-            found += n; done += 1
-            print(f"  {status}: {len(items)} results → {n} PGs saved")
-        except urllib.error.HTTPError as e:  # keep going with the next area
-            print(f"  failed: HTTP {e.code} {e.msg}")
-        except Exception as e:
-            print(f"  failed: {e}")
-        used = credit()[0]
-    print(f"Done: {done} areas, {found} PGs saved, ${used - start_used:.2f} spent this run, ${limit - used:.2f} left this month.")
+    if budget < MIN_RUN and remaining >= MIN_RUN:
+        budget = MIN_RUN  # Apify needs at least $0.50 per run
+    if budget < MIN_RUN:
+        print("Less than $0.50 credit left. Stopping until the next cycle."); return
 
+    # one batch per run: consecutive areas of the same mode that fit this week's budget
+    mode = queue[0][1] if queue else None
+    batch, est = [], 0.0
+    for area, m in queue[:MAX_AREAS]:
+        if m != mode or est + EST[m] > budget:
+            break
+        batch.append(area); est += EST[m]
+    if not batch:
+        print("Nothing to scrape."); return
+    cap = round(max(MIN_RUN, min(budget, remaining)), 2)
+    print(f"This week: {len(batch)} areas [{mode}] · estimated ${est:.2f} · hard cap ${cap:.2f}")
+    print("  " + ", ".join(a["name"] for a in batch))
+    if DRY:
+        return
+
+    status, items = run_batch(batch, mode, cap)
+    print(f"Apify run {status}: {len(items)} raw results")
+    by_search = {q.lower(): a for a in batch for q in searches(a, mode)}
+    per_area = {a["id"]: [] for a in batch}
+    for x in items:
+        a = by_search.get((x.get("searchString") or "").lower())
+        if a:
+            per_area[a["id"]].append(x)
+    total = 0
+    for a in batch:
+        try:
+            n = rpc("scraper_import", {"k": KEY, "area_id": a["id"], "mode": mode, "items": clean(per_area[a["id"]], mode)})
+            total += n
+            print(f"  {a['name']}: {n} PGs saved")
+        except urllib.error.HTTPError as e:
+            print(f"  {a['name']}: import failed HTTP {e.code} {e.msg}")
+    used2 = credit()[0]
+    print(f"Done: {len(batch)} areas, {total} PGs saved, ${used2 - used:.2f} spent this run, ${limit - used2:.2f} left this month.")
 
 if __name__ == "__main__":
     main()
