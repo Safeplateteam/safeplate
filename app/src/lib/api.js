@@ -5,6 +5,9 @@ export const SUPABASE_URL = 'https://agcvwaauvtofnvymwhsc.supabase.co'
 export const SUPABASE_KEY = 'sb_publishable_9_qjvc3ekBBo98OI85vfxw_0vyztTZu'
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } })
 
+// Phone.email "Sign in with Phone" Client ID (public). Empty = reviewers type their number without OTP.
+export const PHONE_EMAIL_CLIENT_ID = ''
+
 // Public web link of the app (used inside QR posters)
 export const PUBLIC_URL = 'https://safeplateteam.github.io/safeplate/'
 
@@ -34,6 +37,12 @@ export async function submitReview(r) {
   return data
 }
 
+export async function requestArea(area) {
+  const { data, error } = await sb.rpc('request_area', { area })
+  if (error) throw new Error(friendly(error.message))
+  return data
+}
+
 export async function requestVisit(v) {
   const { error } = await sb.from('visit_requests').insert(v)
   if (error) throw new Error(friendly(error.message))
@@ -57,6 +66,9 @@ export const admin = {
   savePg: (pass, pg) => rpc('admin_save_pg', { pass, pg }),
   hideReview: (pass, review_id, is_hidden) => rpc('admin_set_review_hidden', { pass, review_id, is_hidden }),
   qrCodes: (pass) => rpc('admin_qr_codes', { pass }),
+  areas: (pass) => rpc('admin_areas', { pass }),
+  setArea: (pass, area_id, new_status, new_priority = null) => rpc('admin_set_area', { pass, area_id, new_status, new_priority }),
+  addArea: (pass, area, prio = 10) => rpc('admin_add_area', { pass, area, prio }),
 }
 async function rpc(fn, args) {
   const { data, error } = await sb.rpc(fn, args)

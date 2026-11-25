@@ -20,7 +20,7 @@ export default function PGCard({ pg, onOpen, compact }) {
           )}
         </div>
         <div className="card-meta">
-          {[pg.sector && `Sector ${pg.sector}`, GENDER_LABEL[pg.gender], rent].filter(Boolean).join(' · ') || pg.address}
+          {[pg.dist != null && (pg.dist < 1 ? `${Math.round(pg.dist * 1000)} m` : `${pg.dist.toFixed(1)} km`), pg.sector && `Sector ${pg.sector}`, GENDER_LABEL[pg.gender], rent].filter(Boolean).join(' · ') || pg.address}
         </div>
         {pg.verified && !compact && (
           <div className="mini-pillars">

@@ -1,0 +1,23 @@
+name: Weekly Gurgaon PG scrape
+on:
+  schedule:
+    - cron: '17 21 * * 6'   # every Sunday 02:47 IST
+  workflow_dispatch:
+    inputs:
+      max_areas: { description: 'Max areas this run', default: '40' }
+      dry_run:   { description: 'Dry run (plan only, no scraping)', type: boolean, default: false }
+concurrency: { group: scrape, cancel-in-progress: false }
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python scraper/weekly_scrape.py
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SCRAPER_KEY: ${{ secrets.SCRAPER_KEY }}
+          MAX_AREAS: ${{ inputs.max_areas || '40' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}

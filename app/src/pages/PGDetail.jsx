@@ -111,7 +111,7 @@ export default function PGDetail({ pg, loading }) {
             <div key={r.id} className="review">
               <div className="review-head">
                 <div className="avatar">{r.name[0]}</div>
-                <div><b>{r.name}</b>{r.is_resident && <span className="resident-tag">Resident</span>}<small>{timeAgo(r.created_at)}{r.months_stayed ? ` · stayed ${r.months_stayed} mo` : ''}</small></div>
+                <div><b>{r.name}</b>{r.is_resident && <span className="resident-tag">Resident</span>}{r.phone_verified && <span className="resident-tag blue">✓ Phone verified</span>}<small>{timeAgo(r.created_at)}{r.months_stayed ? ` · stayed ${r.months_stayed} mo` : ''}</small></div>
               </div>
               <div className="review-scores">
                 {PILLARS.map(p => <span key={p.key}>{p.icon} {r[p.key]}</span>)}

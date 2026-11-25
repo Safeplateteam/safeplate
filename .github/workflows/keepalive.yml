@@ -1,0 +1,16 @@
+name: Keep Supabase awake
+on:
+  schedule:
+    - cron: '41 4 */3 * *'   # every 3 days
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping database (public read)
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://agcvwaauvtofnvymwhsc.supabase.co/rest/v1/pgs?select=id&limit=1" \
+            -H "apikey: sb_publishable_9_qjvc3ekBBo98OI85vfxw_0vyztTZu")
+          echo "Supabase answered $code"
+          test "$code" = "200"

@@ -48,7 +48,7 @@ export default function Admin({ pgs, refresh }) {
         <button className="icon-btn" onClick={() => { sessionStorage.removeItem('sp_admin'); setDash(null); setPass('') }}>⎋</button>
       </header>
       <div className="tabs">
-        {[['dash', 'Dashboard'], ['pgs', 'PGs'], ['reviews', 'Reviews'], ['visits', 'Visits']].map(([k, l]) =>
+        {[['dash', 'Dashboard'], ['pgs', 'PGs'], ['areas', 'Areas'], ['reviews', 'Reviews'], ['visits', 'Visits']].map(([k, l]) =>
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}
       </div>
 
@@ -86,6 +86,8 @@ export default function Admin({ pgs, refresh }) {
         </div>
       )}
 
+      {tab === 'areas' && <Areas pass={pass} flash={flash} />}
+
       {tab === 'reviews' && (
         <div className="pad">
           {dash.recent_reviews.length === 0 && <p className="muted">No reviews yet.</p>}
@@ -116,6 +118,51 @@ export default function Admin({ pgs, refresh }) {
         </div>
       )}
       <Toast msg={toast} />
+    </div>
+  )
+}
+
+function Areas({ pass, flash }) {
+  const [areas, setAreas] = useState(null)
+  const [name, setName] = useState('')
+  const load = () => admin.areas(pass).then(setAreas).catch(e => flash(e.message))
+  useEffect(() => { load() }, []) // eslint-disable-line
+  const set = async (a, st) => { await admin.setArea(pass, a.id, st, st === 'active' ? 10 : null); flash(st === 'active' ? a.name + ' approved' : a.name + ' removed'); load() }
+  const add = async (e) => { e.preventDefault(); await admin.addArea(pass, name); setName(''); flash('Added'); load() }
+  if (!areas) return <div className="pad muted">Loading…</div>
+  const req = areas.filter(a => a.status === 'requested')
+  const act = areas.filter(a => a.status === 'active')
+  const swept = act.filter(a => a.basic_at).length, full = act.filter(a => a.full_at).length
+  const d = (x) => x ? new Date(x).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'
+  return (
+    <div className="pad">
+      <div className="kpis">
+        <Kpi n={`${swept}/${act.length}`} l="Areas listed (basic sweep)" />
+        <Kpi n={`${full}/${act.length}`} l="Areas with photos + reviews" />
+      </div>
+      <p className="muted small">The scraper runs every Sunday on the free Apify credit and works through this list. Approved requests go first.</p>
+      <h3>Requested by users ({req.length})</h3>
+      {req.length === 0 && <p className="muted small">No new requests.</p>}
+      {req.map(a => (
+        <div key={a.id} className="area-row">
+          <div><b>{a.name}</b><small>{a.request_count} request{a.request_count > 1 ? 's' : ''}</small></div>
+          <div className="admin-actions">
+            <button className="btn btn-small btn-primary" onClick={() => set(a, 'active')}>Approve</button>
+            <button className="btn btn-small btn-ghost" onClick={() => set(a, 'rejected')}>Reject</button>
+          </div>
+        </div>
+      ))}
+      <form onSubmit={add} className="decide-more" style={{ margin: '16px 0' }}>
+        <input className="input" placeholder="Add an area, e.g. Sector 57" value={name} onChange={e => setName(e.target.value)} required />
+        <button className="btn btn-primary">Add</button>
+      </form>
+      <h3>In rotation ({act.length})</h3>
+      {act.map(a => (
+        <div key={a.id} className="area-row">
+          <div><b>{a.name}</b><small>Listed {d(a.basic_at)} · Full {d(a.full_at)}{a.last_found != null ? ` · ${a.last_found} PGs` : ''}</small></div>
+          <button className="btn btn-small btn-ghost" onClick={() => set(a, 'rejected')}>Remove</button>
+        </div>
+      ))}
     </div>
   )
 }

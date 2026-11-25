@@ -261,3 +261,17 @@ textarea.input { resize: vertical; }
 @media (min-width: 561px) { #root { box-shadow: 0 0 0 1px var(--line); } }
 
 .pre { white-space: pre-line; }
+
+.cluster { width: 40px; height: 40px; border-radius: 50%; background: rgba(15,81,50,.9); color: #fff; font-weight: 800; display: grid; place-items: center; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.3); font-size: 13px; }
+.cta-area { display: flex; gap: 12px; align-items: center; background: #EFF4FF; border: 1px solid #C7D7FE; border-radius: var(--radius); padding: 14px; margin: 24px 0 0; cursor: pointer; }
+.cta-area > div:first-child { font-size: 28px; }
+.cta-area b { display: block; color: #1D4ED8; }
+.cta-area span { font-size: 13px; color: var(--ink-2); }
+.cta-area > div:last-child { font-size: 24px; color: #1D4ED8; }
+.count { font-size: 13px; color: var(--muted); font-weight: 600; margin-left: 4px; }
+.resident-tag.blue { background: #EFF4FF; color: #1D4ED8; }
+.pe-box { margin-top: 14px; background: #fff; border: 1.5px solid #D0D5DD; border-radius: 12px; padding: 14px; }
+.pe-box b { display: block; font-size: 14px; }
+.pe-done { color: var(--green); font-weight: 700; }
+.area-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fff; padding: 10px 12px; border-radius: 12px; margin-bottom: 6px; box-shadow: var(--shadow); font-size: 14px; }
+.area-row small { display: block; color: var(--muted); font-size: 12px; }
