@@ -17,7 +17,7 @@ export default function Landing({ pgs, user, onChoose }) {
           <div className="landing-stats">
             <div><b>{total}</b><span>PGs listed</span></div>
             <div><b>{sectors}</b><span>sectors</span></div>
-            <div><b>{verified}</b><span>verified</span></div>
+            {verified > 0 ? <div><b>{verified}</b><span>verified</span></div> : <div><b>4</b><span>trust checks</span></div>}
           </div>
         )}
       </div>
