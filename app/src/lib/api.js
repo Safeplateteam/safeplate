@@ -3,10 +3,27 @@ import { createClient } from '@supabase/supabase-js'
 // Publishable key: safe to ship inside the app (access is controlled by database rules)
 export const SUPABASE_URL = 'https://agcvwaauvtofnvymwhsc.supabase.co'
 export const SUPABASE_KEY = 'sb_publishable_9_qjvc3ekBBo98OI85vfxw_0vyztTZu'
-export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } })
+export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } })
 
-// Phone.email "Sign in with Phone" Client ID (public). Empty = reviewers type their number without OTP.
+// Email OTP for reviews (Supabase Auth + Brevo). false = reviewers type a phone number without OTP.
+export const EMAIL_OTP = true
+// Phone.email Client ID (not used; email OTP chosen instead)
 export const PHONE_EMAIL_CLIENT_ID = ''
+
+export async function verifiedEmail() {
+  const { data } = await sb.auth.getSession()
+  return data.session?.user?.email || null
+}
+export async function sendEmailCode(email) {
+  const { error } = await sb.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true } })
+  if (error) throw new Error(error.message.includes('rate') ? 'Too many codes requested. Please wait a few minutes and try again.' : error.message)
+}
+export async function checkEmailCode(email, token) {
+  const { data, error } = await sb.auth.verifyOtp({ email: email.trim().toLowerCase(), token: token.trim(), type: 'email' })
+  if (error) throw new Error(/expired|invalid/i.test(error.message) ? 'That code is wrong or expired. Request a new one.' : error.message)
+  return data.user?.email
+}
+export async function signOutEmail() { await sb.auth.signOut() }
 
 // Public web link of the app (used inside QR posters)
 export const PUBLIC_URL = 'https://safeplateteam.github.io/safeplate/'
@@ -91,7 +108,7 @@ export function track(event, pg_id = null, meta = {}) {
 function friendly(msg = '') {
   if (msg.includes('phone_check')) return 'Please enter a valid 10-digit Indian mobile number.'
   if (msg.includes('name_check')) return 'Please enter your name (2–40 characters).'
-  if (msg.includes('already reviewed')) return 'You have already reviewed this PG with this phone number.'
+  if (msg.includes('already reviewed')) return 'You have already reviewed this PG.'
   return msg
 }
 

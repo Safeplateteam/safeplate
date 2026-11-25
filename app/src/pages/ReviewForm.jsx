@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { submitReview, uploadPhoto, track, PHONE_EMAIL_CLIENT_ID } from '../lib/api.js'
+import { submitReview, uploadPhoto, track, EMAIL_OTP, verifiedEmail, sendEmailCode, checkEmailCode, signOutEmail } from '../lib/api.js'
 import { PILLARS } from '../lib/constants.js'
 import { StarsInput, VerifiedBadge } from '../components/ui.jsx'
 import { go } from '../App.jsx'
@@ -13,20 +13,8 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [done, setDone] = useState(false)
-  const [pe, setPe] = useState(null) // { url, phone } after Phone.email OTP
-
-  // Phone.email "Sign in with Phone" button (only when a Client ID is configured)
-  useEffect(() => {
-    if (!PHONE_EMAIL_CLIENT_ID || !pg || done || pe) return
-    window.phoneEmailListener = (u) => {
-      setPe({ url: u.user_json_url, phone: `${u.user_country_code} ${u.user_phone_number}` })
-      track('phone_verified', pg.id)
-    }
-    const s = document.createElement('script')
-    s.src = 'https://www.phone.email/sign_in_button_v1.js'; s.async = true
-    document.body.appendChild(s)
-    return () => { s.remove() }
-  }, [pg, done, pe])
+  const [vEmail, setVEmail] = useState(null) // email verified with a one-time code
+  useEffect(() => { if (EMAIL_OTP) verifiedEmail().then(setVEmail) }, [])
 
   useEffect(() => { track('review_start', pg?.id || null, { qr: !!code }) }, [pg, code])
 
@@ -66,7 +54,7 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
 
   const set = (k, v) => setR({ ...r, [k]: v })
   const toggleIssue = (k) => set('issues', r.issues.includes(k) ? r.issues.filter(x => x !== k) : [...r.issues, k])
-  const phoneOk = PHONE_EMAIL_CLIENT_ID ? !!pe : /^[6-9]\d{9}$/.test(r.phone.replace(/\D/g, '').slice(-10))
+  const phoneOk = EMAIL_OTP ? !!vEmail : /^[6-9]\d{9}$/.test(r.phone.replace(/\D/g, '').slice(-10))
   const ready = PILLARS.every(p => r[p.key] > 0) && r.name.trim().length >= 2 && phoneOk
 
   const addPhotos = async (files) => {
@@ -78,11 +66,11 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
 
   const send = async (e) => {
     e.preventDefault()
-    if (!ready) { setErr(PHONE_EMAIL_CLIENT_ID && !pe ? 'Please rate all four sections, add your name and verify your phone.' : 'Please rate all four sections and add your name and a valid mobile number.'); return }
+    if (!ready) { setErr(EMAIL_OTP && !vEmail ? 'Please rate all four sections, add your name and verify your email.' : 'Please rate all four sections and add your name and a valid mobile number.'); return }
     setBusy(true); setErr('')
     try {
       await submitReview({
-        pg_id: pg.id, qr: code || null, name: r.name.trim(), pe_url: pe?.url || null, phone: pe ? null : r.phone.replace(/\D/g, '').slice(-10),
+        pg_id: pg.id, qr: code || null, name: r.name.trim(), phone: EMAIL_OTP ? null : r.phone.replace(/\D/g, '').slice(-10),
         food: r.food, hygiene: r.hygiene, amenities: r.amenities, security: r.security,
         issues: r.issues, comment: r.comment.trim() || null, photos, months_stayed: r.months_stayed ? Number(r.months_stayed) : null,
       })
@@ -136,14 +124,7 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
           <label>Your name<input className="input" required maxLength={40} placeholder="e.g. Rahul S." value={r.name} onChange={e => set('name', e.target.value)} /></label>
           <label>Months stayed<input className="input" inputMode="numeric" maxLength={3} value={r.months_stayed} onChange={e => set('months_stayed', e.target.value.replace(/\D/g, ''))} /></label>
         </div>
-        {PHONE_EMAIL_CLIENT_ID ? (
-          <div className="pe-box">
-            <b>Verify your mobile number</b>
-            <small className="muted">One-time OTP. Stops fake reviews. Your number is never shown publicly.</small>
-            {pe ? <div className="pe-done">✓ Verified {pe.phone}</div>
-                : <div className="pe_signin_button" data-client-id={PHONE_EMAIL_CLIENT_ID} style={{ marginTop: 10 }} />}
-          </div>
-        ) : (
+        {EMAIL_OTP ? <EmailVerify email={vEmail} onChange={setVEmail} pgId={pg.id} /> : (
           <label>Mobile number<input className="input" required inputMode="numeric" placeholder="10-digit mobile" value={r.phone} onChange={e => set('phone', e.target.value)} />
             <small className="muted">Only used to stop fake and duplicate reviews. Never shown publicly.</small>
           </label>
@@ -152,6 +133,52 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
         {err && <div className="notice error">{err}</div>}
         <button className="btn btn-primary btn-block btn-lg" disabled={busy}>{busy ? 'Posting…' : 'Post review'}</button>
       </form>
+    </div>
+  )
+}
+
+// Email + one-time code. No password, no account screens; stays signed in on this device.
+function EmailVerify({ email, onChange, pgId }) {
+  const [addr, setAddr] = useState('')
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState('email')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  if (email) return (
+    <div className="pe-box">
+      <div className="pe-done">✓ Verified as {email}</div>
+      <button type="button" className="btn btn-small btn-ghost" onClick={async () => { await signOutEmail(); onChange(null) }}>Use a different email</button>
+    </div>
+  )
+  const send = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr.trim())) { setErr('Please enter a valid email address.'); return }
+    setBusy(true); setErr('')
+    try { await sendEmailCode(addr); setStep('code'); track('email_code_sent', pgId) } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const verify = async () => {
+    setBusy(true); setErr('')
+    try { const e = await checkEmailCode(addr, code); onChange(e); track('email_verified', pgId) } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  return (
+    <div className="pe-box">
+      <b>Verify your email</b>
+      <small className="muted">We send a one-time code. Stops fake reviews. Your email is never shown publicly.</small>
+      {step === 'email' ? (
+        <div className="decide-more" style={{ marginTop: 10 }}>
+          <input className="input" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" value={addr} onChange={e => setAddr(e.target.value)} />
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={send}>{busy ? 'Sending…' : 'Send code'}</button>
+        </div>
+      ) : (
+        <>
+          <p className="small muted" style={{ margin: '8px 0' }}>Code sent to <b>{addr}</b>. Check your inbox and spam folder.</p>
+          <div className="decide-more">
+            <input className="input" inputMode="numeric" autoComplete="one-time-code" maxLength={10} placeholder="Enter code" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} />
+            <button type="button" className="btn btn-primary" disabled={busy || code.length < 6} onClick={verify}>{busy ? 'Checking…' : 'Verify'}</button>
+          </div>
+          <button type="button" className="btn btn-small btn-ghost" onClick={() => { setStep('email'); setCode('') }}>Change email / resend</button>
+        </>
+      )}
+      {err && <div className="notice error">{err}</div>}
     </div>
   )
 }
