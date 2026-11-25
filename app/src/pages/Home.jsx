@@ -17,7 +17,7 @@ export function km(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
-export default function Home({ pgs, err }) {
+export default function Home({ pgs, err, user, onSignOut }) {
   const [q, setQ] = useState('')
   const [f, setF] = useState(new Set())
   const [view, setView] = useState('list')
@@ -127,7 +127,10 @@ export default function Home({ pgs, err }) {
             <div><b>Already living in a PG?</b><span>Rate its food, hygiene, amenities and security in 1 minute. Help the next person moving in.</span></div>
             <div>›</div>
           </div>
-          <footer className="foot">SafePlate · Gurgaon · Made by Group 11</footer>
+          <footer className="foot">
+            {user && <div>Signed in as {user} · <a onClick={onSignOut}>Sign out</a></div>}
+            SafePlate · Gurgaon · Made by Group 11
+          </footer>
         </main>
       )}
       <AreaSheet open={ask} onClose={() => setAsk(false)} onDone={(m) => { setAsk(false); flash(m) }} initial={q} />

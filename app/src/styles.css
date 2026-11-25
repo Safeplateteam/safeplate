@@ -275,3 +275,14 @@ textarea.input { resize: vertical; }
 .pe-done { color: var(--green); font-weight: 700; }
 .area-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #fff; padding: 10px 12px; border-radius: 12px; margin-bottom: 6px; box-shadow: var(--shadow); font-size: 14px; }
 .area-row small { display: block; color: var(--muted); font-size: 12px; }
+
+.login { min-height: 100vh; display: flex; flex-direction: column; background: linear-gradient(160deg, #0F5132 0%, #0E7C66 100%); }
+.login-hero { color: #fff; text-align: center; padding: 56px 24px 28px; }
+.login-hero img { width: 64px; background: #fff; border-radius: 18px; padding: 6px; }
+.login-hero h1 { font-size: 30px; font-weight: 800; margin: 12px 0 6px; }
+.login-hero p { opacity: .9; margin: 0; }
+.login-card { flex: 1; background: #fff; border-radius: 28px 28px 0 0; padding: 28px 22px calc(28px + env(safe-area-inset-bottom)); }
+.login-card h2 { font-size: 22px; font-weight: 800; }
+.login-card .input { margin-top: 12px; font-size: 17px; padding: 14px 16px; }
+.code-input { letter-spacing: 8px; text-align: center; font-size: 24px !important; font-weight: 800; }
+.login-foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 18px; }

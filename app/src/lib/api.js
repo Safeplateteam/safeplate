@@ -23,7 +23,21 @@ export async function checkEmailCode(email, token) {
   if (error) throw new Error(/expired|invalid/i.test(error.message) ? 'That code is wrong or expired. Request a new one.' : error.message)
   return data.user?.email
 }
-export async function signOutEmail() { await sb.auth.signOut() }
+export async function signOutEmail() { await sb.auth.signOut(); try { localStorage.removeItem('sp_login_at') } catch {} }
+
+// Sign-in lasts 10 days on a device, then the app asks for a new code
+export const LOGIN_DAYS = 10
+export function markLogin() { try { localStorage.setItem('sp_login_at', String(Date.now())) } catch {} }
+export async function currentUser() {
+  const { data } = await sb.auth.getSession()
+  const user = data.session?.user
+  if (!user) return null
+  let at = 0
+  try { at = Number(localStorage.getItem('sp_login_at') || 0) } catch {}
+  if (!at) { markLogin(); return user.email }
+  if (Date.now() - at > LOGIN_DAYS * 86400000) { await signOutEmail(); return null }
+  return user.email
+}
 
 // Public web link of the app (used inside QR posters)
 export const PUBLIC_URL = 'https://safeplateteam.github.io/safeplate/'

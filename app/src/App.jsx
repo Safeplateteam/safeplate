@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { loadPgs, track } from './lib/api.js'
+import { loadPgs, track, currentUser, signOutEmail } from './lib/api.js'
+import Login from './components/Login.jsx'
 import Home from './pages/Home.jsx'
 import PGDetail from './pages/PGDetail.jsx'
 import ReviewForm from './pages/ReviewForm.jsx'
@@ -22,6 +23,9 @@ export default function App() {
   const [err, setErr] = useState(null)
   const [welcomed, setWelcomed] = useState(() => { try { return !!localStorage.getItem('sp_persona') } catch { return true } })
 
+  const [user, setUser] = useState(undefined) // undefined = checking, null = signed out
+  useEffect(() => { currentUser().then(setUser) }, [])
+
   const refresh = useCallback(() => loadPgs().then(setPgs).catch(e => setErr(e.message)), [])
 
   useEffect(() => {
@@ -34,12 +38,14 @@ export default function App() {
 
   if (route.name === 'admin') return <Admin pgs={pgs} refresh={refresh} />
   if (route.name === 'poster') return <Poster pgs={pgs} id={route.id} />
+  if (user === undefined) return <div className="page center"><img src="./icon.svg" alt="" style={{ width: 64, opacity: .8 }} /></div>
+  if (!user) return <Login onDone={setUser} />
 
   const pg = route.id && pgs ? pgs.find(p => p.id === route.id) : null
   let page
   if (route.name === 'pg') page = <PGDetail pg={pg} loading={!pgs} />
   else if (route.name === 'review') page = <ReviewForm pg={pg} pgs={pgs} code={route.query.code} onDone={refresh} />
-  else page = <Home pgs={pgs} err={err} />
+  else page = <Home pgs={pgs} err={err} user={user} onSignOut={async () => { await signOutEmail(); setUser(null) }} />
 
   // residents arriving through a QR poster skip the welcome screen
   const showWelcome = !welcomed && route.name !== 'review'
