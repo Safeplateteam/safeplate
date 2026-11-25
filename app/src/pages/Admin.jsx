@@ -48,7 +48,7 @@ export default function Admin({ pgs, refresh }) {
         <button className="icon-btn" onClick={() => { sessionStorage.removeItem('sp_admin'); setDash(null); setPass('') }}>⎋</button>
       </header>
       <div className="tabs">
-        {[['dash', 'Dashboard'], ['pgs', 'PGs'], ['areas', 'Areas'], ['reviews', 'Reviews'], ['visits', 'Visits']].map(([k, l]) =>
+        {[['dash', 'Dashboard'], ['pgs', 'PGs'], ['owners', 'Owners'], ['areas', 'Areas'], ['reviews', 'Reviews'], ['visits', 'Visits']].map(([k, l]) =>
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}
       </div>
 
@@ -87,6 +87,7 @@ export default function Admin({ pgs, refresh }) {
       )}
 
       {tab === 'areas' && <Areas pass={pass} flash={flash} />}
+      {tab === 'owners' && <Owners pass={pass} flash={flash} />}
 
       {tab === 'reviews' && (
         <div className="pad">
@@ -118,6 +119,32 @@ export default function Admin({ pgs, refresh }) {
         </div>
       )}
       <Toast msg={toast} />
+    </div>
+  )
+}
+
+function Owners({ pass, flash }) {
+  const [leads, setLeads] = useState(null)
+  const load = () => admin.ownerLeads(pass).then(setLeads).catch(e => flash(e.message))
+  useEffect(() => { load() }, []) // eslint-disable-line
+  const set = async (l, st) => { await admin.setOwnerLead(pass, l.id, st); load() }
+  if (!leads) return <div className="pad muted">Loading…</div>
+  return (
+    <div className="pad">
+      <p className="muted small">PG owners who asked to get verified. Call them, visit the PG, then add it in the PGs tab and mark it Verified.</p>
+      {leads.length === 0 && <p className="muted">No owner requests yet.</p>}
+      {leads.map(l => (
+        <div key={l.id} className="admin-review">
+          <div className="row-between"><b>{l.pg_name}</b><small>{timeAgo(l.created_at)}</small></div>
+          <div>{l.owner_name} · <a href={'tel:' + l.phone}>{l.phone}</a></div>
+          <div className="small muted">{[l.area, l.beds && l.beds + ' beds', l.message].filter(Boolean).join(' · ')}</div>
+          <div className="chips wrap" style={{ marginTop: 8 }}>
+            {['new', 'contacted', 'onboarded', 'rejected'].map(st => (
+              <button key={st} className={'chip small' + (l.status === st ? ' on' : '')} onClick={() => set(l, st)}>{st}</button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

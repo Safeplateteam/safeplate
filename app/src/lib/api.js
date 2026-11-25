@@ -74,6 +74,11 @@ export async function requestArea(area) {
   return data
 }
 
+export async function ownerLead(v) {
+  const { error } = await sb.from('owner_leads').insert(v)
+  if (error) throw new Error(friendly(error.message))
+}
+
 export async function requestVisit(v) {
   const { error } = await sb.from('visit_requests').insert(v)
   if (error) throw new Error(friendly(error.message))
@@ -98,6 +103,8 @@ export const admin = {
   hideReview: (pass, review_id, is_hidden) => rpc('admin_set_review_hidden', { pass, review_id, is_hidden }),
   qrCodes: (pass) => rpc('admin_qr_codes', { pass }),
   areas: (pass) => rpc('admin_areas', { pass }),
+  ownerLeads: (pass) => rpc('admin_owner_leads', { pass }),
+  setOwnerLead: (pass, lead_id, new_status) => rpc('admin_set_owner_lead', { pass, lead_id, new_status }),
   setArea: (pass, area_id, new_status, new_priority = null) => rpc('admin_set_area', { pass, area_id, new_status, new_priority }),
   addArea: (pass, area, prio = 10) => rpc('admin_add_area', { pass, area, prio }),
 }

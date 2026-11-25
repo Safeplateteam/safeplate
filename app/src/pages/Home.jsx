@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react'
 import PGCard from '../components/PGCard.jsx'
 import MapView from '../components/MapView.jsx'
 import { Sheet, Toast } from '../components/ui.jsx'
-import { track, requestArea } from '../lib/api.js'
+import { track, requestArea, ownerLead } from '../lib/api.js'
 import { go } from '../App.jsx'
 
 const FILTERS = [
@@ -25,6 +25,7 @@ export default function Home({ pgs, err, user, onSignOut }) {
   const [me, setMe] = useState(null)
   const [shown, setShown] = useState(PAGE)
   const [ask, setAsk] = useState(false)
+  const [owner, setOwner] = useState(false)
   const [toast, setToast] = useState('')
   const flash = (m) => { setToast(m); setTimeout(() => setToast(''), 3500) }
 
@@ -83,6 +84,18 @@ export default function Home({ pgs, err, user, onSignOut }) {
         {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (f.has(k) ? ' on' : '')} onClick={() => toggle(k)}>{l}</button>)}
       </div>
 
+      <div className="actions">
+        <button className="action a-resident" onClick={() => { track('resident_cta'); go('/review') }}>
+          <span>🏠</span><b>Live in a PG?</b><small>Rate it in 1 min</small>
+        </button>
+        <button className="action a-owner" onClick={() => { setOwner(true); track('owner_cta') }}>
+          <span>🏢</span><b>Own a PG?</b><small>Get verified free</small>
+        </button>
+        <button className="action a-area" onClick={() => { setAsk(true); track('area_request_open') }}>
+          <span>📍</span><b>Area missing?</b><small>Request it</small>
+        </button>
+      </div>
+
       {err && <div className="notice error">Couldn't load PGs. Check your internet and reopen the app.</div>}
       {!pgs && !err && <div className="skeleton-list">{[1, 2, 3].map(i => <div key={i} className="skeleton" />)}</div>}
 
@@ -117,22 +130,13 @@ export default function Home({ pgs, err, user, onSignOut }) {
           )}
           {list.length === 0 && <div className="empty">No PGs match this yet.</div>}
 
-          <div className="cta-area" onClick={() => { setAsk(true); track('area_request_open') }}>
-            <div>📍</div>
-            <div><b>Don't see your area?</b><span>Tell us where you're moving. We add new areas every week.</span></div>
-            <div>›</div>
-          </div>
-          <div className="cta-resident" onClick={() => { track('resident_cta'); go('/review') }}>
-            <div>🏠</div>
-            <div><b>Already living in a PG?</b><span>Rate its food, hygiene, amenities and security in 1 minute. Help the next person moving in.</span></div>
-            <div>›</div>
-          </div>
           <footer className="foot">
             {user && <div>Signed in as {user} · <a onClick={onSignOut}>Sign out</a></div>}
             SafePlate · Gurgaon · Made by Group 11
           </footer>
         </main>
       )}
+      <OwnerSheet open={owner} onClose={() => setOwner(false)} onDone={(m) => { setOwner(false); flash(m) }} />
       <AreaSheet open={ask} onClose={() => setAsk(false)} onDone={(m) => { setAsk(false); flash(m) }} initial={q} />
       <Toast msg={toast} />
     </div>
@@ -156,6 +160,47 @@ function AreaSheet({ open, onClose, onDone, initial }) {
         <label>Area or sector<input className="input" required autoFocus placeholder="e.g. Sector 56, Sushant Lok 2" value={area} onChange={e => setArea(e.target.value)} /></label>
         {err && <div className="notice error">{err}</div>}
         <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Sending…' : 'Request this area'}</button>
+      </form>
+    </Sheet>
+  )
+}
+
+function OwnerSheet({ open, onClose, onDone }) {
+  const blank = { owner_name: '', phone: '', pg_name: '', area: '', beds: '', message: '' }
+  const [v, setV] = useState(blank)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const set = (k, x) => setV({ ...v, [k]: x })
+  const send = async (e) => {
+    e.preventDefault(); setBusy(true); setErr('')
+    const phone = v.phone.replace(/\D/g, '').slice(-10)
+    if (!/^[6-9]\d{9}$/.test(phone)) { setErr('Please enter a valid 10-digit mobile number.'); setBusy(false); return }
+    try {
+      await ownerLead({ ...v, phone, beds: v.beds ? Number(v.beds) : null, area: v.area || null, message: v.message || null })
+      track('owner_lead'); setV(blank)
+      onDone('Thanks! The SafePlate team will call you within 2 days to schedule a visit.')
+    } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  return (
+    <Sheet open={open} onClose={onClose} title="Get your PG verified">
+      <form className="form" onSubmit={send}>
+        <div className="owner-perks">
+          <div>✓ <b>"Verified by SafePlate"</b> badge on your listing</div>
+          <div>✓ Shown first, above unverified PGs</div>
+          <div>✓ Visit requests from people moving to Gurgaon</div>
+          <div>✓ Free during our pilot</div>
+        </div>
+        <p className="muted small">Our team visits your PG, checks the kitchen, water, hygiene and security, and then lists it as verified.</p>
+        <label>Your name<input className="input" required maxLength={60} value={v.owner_name} onChange={e => set('owner_name', e.target.value)} /></label>
+        <label>Mobile number<input className="input" required inputMode="numeric" placeholder="10-digit mobile" value={v.phone} onChange={e => set('phone', e.target.value)} /></label>
+        <label>PG name<input className="input" required maxLength={100} value={v.pg_name} onChange={e => set('pg_name', e.target.value)} /></label>
+        <div className="two">
+          <label>Area / sector<input className="input" maxLength={120} placeholder="e.g. Sector 30" value={v.area} onChange={e => set('area', e.target.value)} /></label>
+          <label>No. of beds<input className="input" inputMode="numeric" maxLength={4} value={v.beds} onChange={e => set('beds', e.target.value.replace(/\D/g, ''))} /></label>
+        </div>
+        <label>Anything else? (optional)<input className="input" maxLength={400} value={v.message} onChange={e => set('message', e.target.value)} /></label>
+        {err && <div className="notice error">{err}</div>}
+        <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Sending…' : 'Request a verification visit'}</button>
       </form>
     </Sheet>
   )
