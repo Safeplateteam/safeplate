@@ -32,7 +32,7 @@ export default function Login({ onDone }) {
         {step === 'email' ? (
           <form onSubmit={send}>
             <h2>Sign in</h2>
-            <p className="muted small">We'll email you a 6-digit code. No password needed.</p>
+            <p className="muted small">We'll email you a one-time code. No password needed.</p>
             <input className="input" type="email" inputMode="email" autoComplete="email" autoFocus
               placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} />
             {err && <div className="notice error">{err}</div>}
@@ -43,7 +43,7 @@ export default function Login({ onDone }) {
             <h2>Enter the code</h2>
             <p className="muted small">Sent to <b>{email}</b>. Check your inbox and spam folder.</p>
             <input className="input code-input" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={10}
-              placeholder="••••••" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} />
+              placeholder="Enter code" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} />
             {err && <div className="notice error">{err}</div>}
             <button className="btn btn-primary btn-block btn-lg" disabled={busy || code.length < 6}>{busy ? 'Checking…' : 'Verify & continue'}</button>
             <div className="row-between" style={{ marginTop: 8 }}>
