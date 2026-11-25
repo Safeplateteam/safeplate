@@ -9,7 +9,7 @@ The free $5/month is spread evenly over the weeks left in Apify's billing cycle.
 
 Env: APIFY_TOKEN, SCRAPER_KEY (GitHub Secrets). Optional: MAX_AREAS, DRY_RUN=1.
 """
-import json, math, os, re, sys, time, urllib.parse, urllib.request
+import json, math, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 SUPABASE = "https://agcvwaauvtofnvymwhsc.supabase.co"
@@ -45,8 +45,14 @@ def rpc(fn, args):
 
 
 def apify(method, path, body=None, **params):
-    params["token"] = TOKEN
-    return http(method, f"{APIFY}{path}?{urllib.parse.urlencode(params)}", body, timeout=180)
+    try:
+        return http(method, f"{APIFY}{path}?{urllib.parse.urlencode(params)}", body,
+                    {"Authorization": f"Bearer {TOKEN}"}, timeout=180)
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            sys.exit("Apify rejected APIFY_TOKEN (401). Re-copy the full 'Personal API token' (starts with apify_api_) "
+                     "from console.apify.com/settings/integrations and update the GitHub secret.")
+        raise
 
 
 def credit():
@@ -146,6 +152,12 @@ def run_area(area, mode, cap):
 def main():
     if not TOKEN or not KEY:
         sys.exit("Missing APIFY_TOKEN or SCRAPER_KEY secret.")
+    if not TOKEN.startswith("apify_api_"):
+        print("Warning: APIFY_TOKEN does not start with 'apify_api_' - it may be copied incompletely.")
+    try:
+        rpc("scraper_areas", {"k": KEY})
+    except urllib.error.HTTPError:
+        sys.exit("Supabase rejected SCRAPER_KEY. Re-copy it from Supabase (private.settings) and update the GitHub secret.")
     used, limit, days_left = credit()
     remaining = limit - used
     weeks_left = max(1, math.ceil(days_left / 7))
