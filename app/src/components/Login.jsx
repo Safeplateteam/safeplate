@@ -2,10 +2,15 @@ import React, { useState } from 'react'
 import { sendEmailCode, checkEmailCode, track, markLogin } from '../lib/api.js'
 
 // Sign-in gate: email + one-time code. No password. Stays signed in for 10 days on this device.
+// if the user went to their mail app and Android restarted SafePlate, reopen on the code step
+function pending() {
+  try { const p = JSON.parse(localStorage.getItem('sp_login_pending') || 'null'); return p && Date.now() - p.at < 3600000 ? p.email : null } catch { return null }
+}
+
 export default function Login({ onDone }) {
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() => pending() || '')
   const [code, setCode] = useState('')
-  const [step, setStep] = useState('email')
+  const [step, setStep] = useState(() => (pending() ? 'code' : 'email'))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
@@ -13,11 +18,11 @@ export default function Login({ onDone }) {
     e?.preventDefault()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setErr('Please enter a valid email address.'); return }
     setBusy(true); setErr('')
-    try { await sendEmailCode(email); setStep('code'); track('login_code_sent') } catch (x) { setErr(x.message) } finally { setBusy(false) }
+    try { await sendEmailCode(email); setStep('code'); track('login_code_sent'); try { localStorage.setItem('sp_login_pending', JSON.stringify({ email: email.trim(), at: Date.now() })) } catch {} } catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
   const verify = async (e) => {
     e.preventDefault(); setBusy(true); setErr('')
-    try { const em = await checkEmailCode(email, code); markLogin(); track('login'); onDone(em) }
+    try { const em = await checkEmailCode(email, code); markLogin(); track('login'); try { localStorage.removeItem('sp_login_pending') } catch {} onDone(em) }
     catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
 
@@ -47,7 +52,7 @@ export default function Login({ onDone }) {
             {err && <div className="notice error">{err}</div>}
             <button className="btn btn-primary btn-block btn-lg" disabled={busy || code.length < 6}>{busy ? 'Checking…' : 'Verify & continue'}</button>
             <div className="row-between" style={{ marginTop: 8 }}>
-              <button type="button" className="btn btn-small btn-ghost" onClick={() => { setStep('email'); setCode(''); setErr('') }}>Change email</button>
+              <button type="button" className="btn btn-small btn-ghost" onClick={() => { setStep('email'); setCode(''); setErr(''); try { localStorage.removeItem('sp_login_pending') } catch {} }}>Change email</button>
               <button type="button" className="btn btn-small btn-ghost" disabled={busy} onClick={send}>Resend code</button>
             </div>
           </form>

@@ -3,7 +3,7 @@ import { loadPgDetail, requestVisit, sendFeedback, track } from '../lib/api.js'
 import { PILLARS, ISSUE_LABEL, AMENITY_LABEL, CHECKLIST, GENDER_LABEL, rentText, scoreColor } from '../lib/constants.js'
 import { Gallery, VerifiedBadge, UnverifiedBadge, ScorePill, Bar, Stars, Sheet, Toast, timeAgo } from '../components/ui.jsx'
 import MapView from '../components/MapView.jsx'
-import { go } from '../App.jsx'
+import { go, goBack } from '../App.jsx'
 
 export default function PGDetail({ pg, loading }) {
   const [d, setD] = useState(null)
@@ -28,7 +28,7 @@ export default function PGDetail({ pg, loading }) {
     <div className="page detail">
       <div className="detail-media">
         <Gallery photos={pg.photos} alt={pg.name} height={280} />
-        <button className="back-btn" onClick={() => (history.length > 1 ? history.back() : go('/'))}>‹</button>
+        <button className="back-btn" onClick={() => goBack('/')}>‹</button>
       </div>
 
       <div className="detail-body">

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { submitReview, uploadPhoto, track, EMAIL_OTP, verifiedEmail, sendEmailCode, checkEmailCode, signOutEmail } from '../lib/api.js'
 import { PILLARS } from '../lib/constants.js'
 import { StarsInput, VerifiedBadge } from '../components/ui.jsx'
-import { go } from '../App.jsx'
+import { go, goBack } from '../App.jsx'
 
 const LABELS = ['', 'Very bad', 'Bad', 'Okay', 'Good', 'Excellent']
 
@@ -18,12 +18,28 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
 
   useEffect(() => { track('review_start', pg?.id || null, { qr: !!code }) }, [pg, code])
 
+  // keep a draft on the phone so nothing is lost if the user leaves the app (e.g. to copy the email code)
+  const draftKey = pg ? 'sp_draft_' + pg.id : null
+  const [draftLoaded, setDraftLoaded] = useState(false)
+  useEffect(() => {
+    if (!draftKey) return
+    try {
+      const d = JSON.parse(localStorage.getItem(draftKey) || 'null')
+      if (d && Date.now() - d.at < 7 * 86400000) { setR(x => ({ ...x, ...d.r })); setPhotos(d.photos || []) }
+    } catch {}
+    setDraftLoaded(true)
+  }, [draftKey])
+  useEffect(() => {
+    if (!draftKey || !draftLoaded || done) return
+    try { localStorage.setItem(draftKey, JSON.stringify({ r, photos, at: Date.now() })) } catch {}
+  }, [r, photos, draftKey, draftLoaded, done])
+
   // no PG chosen yet → let them pick one
   if (!pg) {
     const t = pick.toLowerCase()
     return (
       <div className="page">
-        <header className="top simple"><button className="icon-btn" onClick={() => go('/')}>‹</button><b>Rate your PG</b><span /></header>
+        <header className="top simple"><button className="icon-btn" onClick={() => goBack('/')}>‹</button><b>Rate your PG</b><span /></header>
         <div className="pad">
           <p className="muted">Which PG do you live in?</p>
           <input className="input" autoFocus placeholder="Search PG name…" value={pick} onChange={e => setPick(e.target.value)} />
@@ -75,13 +91,14 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
         issues: r.issues, comment: r.comment.trim() || null, photos, months_stayed: r.months_stayed ? Number(r.months_stayed) : null,
       })
       track('review_submit', pg.id, { qr: !!code, photos: photos.length, issues: r.issues.length })
+      try { localStorage.removeItem(draftKey) } catch {}
       onDone && onDone(); setDone(true); window.scrollTo(0, 0)
     } catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
 
   return (
     <div className="page review-page">
-      <header className="top simple"><button className="icon-btn" onClick={() => go('/pg/' + pg.id)}>‹</button><b>Rate your PG</b><span /></header>
+      <header className="top simple"><button className="icon-btn" onClick={() => goBack('/pg/' + pg.id)}>‹</button><b>Rate your PG</b><span /></header>
       <form className="pad form" onSubmit={send}>
         <div className="review-pg">
           <h2>{pg.name}</h2>

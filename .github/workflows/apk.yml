@@ -21,7 +21,7 @@ jobs:
         run: |
           npm ci
           npm run build
-          npm i --no-save @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/assets
+          npm i --no-save @capacitor/cli@7 @capacitor/android@7 @capacitor/assets
           npx cap add android
           npx @capacitor/assets generate --android || echo "icon generation skipped"
           npx cap sync android

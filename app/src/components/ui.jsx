@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { pushBack } from '../lib/back.js'
 import { scoreColor } from '../lib/constants.js'
 
 export function VerifiedBadge({ small }) {
@@ -40,14 +41,14 @@ export function Stars({ value }) {
   return <span className="stars">{'★★★★★'.slice(0, v)}<span className="stars-off">{'★★★★★'.slice(v)}</span></span>
 }
 
-export function Gallery({ photos, alt, height = 220, rounded }) {
+export function Gallery({ photos, alt, height = 220, rounded, max = 6 }) {
   const [i, setI] = useState(0)
-  const list = photos && photos.length ? photos : [null]
+  const list = photos && photos.length ? photos.slice(0, max) : [null]
   return (
     <div className={'gallery' + (rounded ? ' rounded' : '')} style={{ height }}>
-      <div className="gallery-track" onScroll={e => setI(Math.round(e.target.scrollLeft / e.target.clientWidth))}>
+      <div className="gallery-track" onScroll={e => { const n = Math.round(e.target.scrollLeft / e.target.clientWidth); if (n !== i) setI(n) }}>
         {list.map((src, k) => src
-          ? <img key={k} src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer"
+          ? <img key={k} src={src} alt={alt} loading="lazy" decoding="async" referrerPolicy="no-referrer"
                  onError={e => { e.currentTarget.replaceWith(Object.assign(document.createElement('div'), { className: 'gallery-empty', textContent: '🏠' })) }} />
           : <div key={k} className="gallery-empty">🏠<span>No photos yet</span></div>)}
       </div>
@@ -57,6 +58,7 @@ export function Gallery({ photos, alt, height = 220, rounded }) {
 }
 
 export function Sheet({ open, onClose, title, children }) {
+  useEffect(() => (open ? pushBack(onClose) : undefined), [open]) // eslint-disable-line
   if (!open) return null
   return (
     <div className="sheet-backdrop" onClick={onClose}>

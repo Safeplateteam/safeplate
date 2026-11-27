@@ -23,15 +23,21 @@ export default function MapView({ pgs, activeId, onSelect, height = '100%', sing
   const me = useRef(null)
 
   useEffect(() => {
-    map.current = L.map(el.current, { zoomControl: false, attributionControl: true }).setView(CENTER, 15)
+    map.current = L.map(el.current, { zoomControl: false, attributionControl: true, zoomSnap: 0.5, inertia: true, scrollWheelZoom: !single, dragging: true, tapTolerance: 20 }).setView(CENTER, 15)
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: '© OpenStreetMap contributors',
+      maxZoom: 19, attribution: '© OpenStreetMap contributors', updateWhenIdle: true, keepBuffer: 3,
     }).addTo(map.current)
+    if (single) { map.current.dragging.disable(); map.current.touchZoom.disable(); map.current.doubleClickZoom.disable() } // small map on PG page: don't trap scrolling
+    // the map is often created before its box has its final size → re-measure so tiles don't stay grey
+    const fix = () => map.current && map.current.invalidateSize()
+    const t1 = setTimeout(fix, 150), t2 = setTimeout(fix, 600)
+    const ro = window.ResizeObserver ? new ResizeObserver(fix) : null
+    ro && ro.observe(el.current)
     layer.current = (single ? L.layerGroup() : L.markerClusterGroup({
       showCoverageOnHover: false, maxClusterRadius: 45, spiderfyOnMaxZoom: true,
       iconCreateFunction: (c) => L.divIcon({ className: '', html: `<div class="cluster">${c.getChildCount()}</div>`, iconSize: [40, 40] }),
     })).addTo(map.current)
-    return () => map.current.remove()
+    return () => { clearTimeout(t1); clearTimeout(t2); ro && ro.disconnect(); map.current.remove(); map.current = null }
   }, [single])
 
   useEffect(() => {
@@ -40,7 +46,7 @@ export default function MapView({ pgs, activeId, onSelect, height = '100%', sing
     const pts = []
     pgs.filter(p => p.lat && p.lng).forEach(p => {
       const m = L.marker([p.lat, p.lng], { icon: pin(p, p.id === activeId), zIndexOffset: p.verified ? 1000 : 0 })
-      if (onSelect) m.on('click', () => onSelect(p))
+      if (onSelect) m.on('click', () => { onSelect(p); map.current.panTo([p.lat, p.lng], { animate: true }) })
       layer.current.addLayer(m)
       pts.push([p.lat, p.lng])
     })

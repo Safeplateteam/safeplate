@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react'
 import PGCard from '../components/PGCard.jsx'
 import MapView from '../components/MapView.jsx'
 import { Sheet, Toast } from '../components/ui.jsx'
+import { pushBack } from '../lib/back.js'
 import { track, requestArea, ownerLead } from '../lib/api.js'
 import { go } from '../App.jsx'
 
@@ -22,6 +23,8 @@ export default function Home({ pgs, err, user, onSignOut, openOwner, onOwnerShow
   const [f, setF] = useState(new Set())
   const [view, setView] = useState('list')
   const [active, setActive] = useState(null)
+  useEffect(() => (active ? pushBack(() => setActive(null)) : undefined), [active])
+  useEffect(() => (view === 'map' ? pushBack(() => setView('list')) : undefined), [view])
   const [me, setMe] = useState(null)
   const [shown, setShown] = useState(PAGE)
   const [ask, setAsk] = useState(false)
@@ -64,7 +67,7 @@ export default function Home({ pgs, err, user, onSignOut, openOwner, onOwnerShow
   const others = list.filter(p => !p.verified).sort(sorter)
 
   return (
-    <div className="page home">
+    <div className={'page home' + (view === 'map' ? ' map-mode' : '')}>
       <header className="top">
         <div className="brand" onClick={onHome} style={{ cursor: 'pointer' }}>
           <img src="./icon.svg" alt="" />
@@ -85,7 +88,7 @@ export default function Home({ pgs, err, user, onSignOut, openOwner, onOwnerShow
         {FILTERS.map(([k, l]) => <button key={k} className={'chip' + (f.has(k) ? ' on' : '')} onClick={() => toggle(k)}>{l}</button>)}
       </div>
 
-      <div className="actions">
+      {view === 'list' && <div className="actions">
         <button className="action a-resident" onClick={() => { track('resident_cta'); go('/review') }}>
           <span>🏠</span><b>Live in a PG?</b><small>Rate it in 1 min</small>
         </button>
@@ -95,16 +98,16 @@ export default function Home({ pgs, err, user, onSignOut, openOwner, onOwnerShow
         <button className="action a-area" onClick={() => { setAsk(true); track('area_request_open') }}>
           <span>📍</span><b>Area missing?</b><small>Request it</small>
         </button>
-      </div>
+      </div>}
 
       {err && <div className="notice error">Couldn't load PGs. Check your internet and reopen the app.</div>}
       {!pgs && !err && <div className="skeleton-list">{[1, 2, 3].map(i => <div key={i} className="skeleton" />)}</div>}
 
       {pgs && view === 'map' && (
         <div className="map-wrap">
-          <MapView pgs={list} activeId={active?.id} onSelect={setActive} center={f.has('near') ? me : null} height="calc(100vh - 210px)" />
+          <MapView pgs={list} activeId={active?.id} onSelect={setActive} center={f.has('near') ? me : null} height="100%" />
           <div className="legend"><span className="pin pin-verified">4.2</span> Verified <span className="pin pin-web">★4.0</span> Not yet verified</div>
-          {active && <div className="map-card"><PGCard pg={active} onOpen={open} compact /></div>}
+          {active && <div className="map-card"><button className="map-card-x" onClick={() => setActive(null)}>✕</button><PGCard pg={active} onOpen={open} compact /></div>}
         </div>
       )}
 

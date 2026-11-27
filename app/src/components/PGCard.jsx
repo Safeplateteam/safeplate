@@ -8,7 +8,7 @@ export default function PGCard({ pg, onOpen, compact }) {
   return (
     <article className={'card' + (compact ? ' card-compact' : '')} onClick={() => onOpen(pg)}>
       <div className="card-media">
-        <Gallery photos={pg.photos} alt={pg.name} height={compact ? 120 : 200} />
+        <Gallery photos={pg.photos} alt={pg.name} height={compact ? 120 : 200} max={compact ? 1 : 5} />
         {pg.verified && <div className="card-badge"><VerifiedBadge small /></div>}
         {pg.verified && s.trust_score != null && <div className="card-score"><ScorePill value={s.trust_score} /></div>}
       </div>
