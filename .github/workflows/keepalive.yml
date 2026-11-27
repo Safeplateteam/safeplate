@@ -14,3 +14,5 @@ jobs:
             -H "apikey: sb_publishable_9_qjvc3ekBBo98OI85vfxw_0vyztTZu")
           echo "Supabase answered $code"
           test "$code" = "200"
+          curl -s -o /dev/null -D - "https://agcvwaauvtofnvymwhsc.supabase.co/rest/v1/pgs?select=id&limit=1" \
+            -H "apikey: sb_publishable_9_qjvc3ekBBo98OI85vfxw_0vyztTZu" -H "Prefer: count=exact" | grep -i content-range || true
