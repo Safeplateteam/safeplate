@@ -1,7 +1,7 @@
 // The four pillars of the SafePlate Trust Score, with the problems residents reported in our research
 export const PILLARS = [
   {
-    key: 'food', label: 'Food', icon: '🥘', color: '#E07A1F',
+    key: 'food', positives: [['tasty', 'Tasty food'], ['good_variety', 'Good variety'], ['home_style', 'Home-style taste'], ['clean_water', 'Clean RO water'], ['meals_on_time', 'Meals on time']], label: 'Food', icon: '🥘', color: '#E07A1F',
     question: 'How is the food?',
     issues: [
       ['oily', 'Too oily'], ['less_variety', 'Same menu daily'], ['thick_chapati', 'Thick / hard chapatis'],
@@ -9,7 +9,7 @@ export const PILLARS = [
     ],
   },
   {
-    key: 'hygiene', label: 'Hygiene', icon: '🧹', color: '#0E7C66',
+    key: 'hygiene', positives: [['clean_rooms', 'Clean rooms'], ['clean_washrooms', 'Clean washrooms'], ['daily_cleaning', 'Daily cleaning'], ['no_pests', 'No pests'], ['clean_kitchen_ok', 'Clean kitchen']], label: 'Hygiene', icon: '🧹', color: '#0E7C66',
     question: 'How clean is the PG?',
     issues: [
       ['dirty_linen', 'Dirty mats / curtains'], ['dust', 'Dusty rooms'], ['cockroaches', 'Cockroaches'],
@@ -17,7 +17,7 @@ export const PILLARS = [
     ],
   },
   {
-    key: 'amenities', label: 'Amenities', icon: '🛠️', color: '#3B5BDB',
+    key: 'amenities', positives: [['good_wifi', 'Good Wi-Fi'], ['washing_machine_ok', 'Washing machine works'], ['power_backup_ok', 'Power backup'], ['quick_repairs', 'Quick repairs'], ['helpful_staff', 'Helpful owner / staff']], label: 'Amenities', icon: '🛠️', color: '#3B5BDB',
     question: 'How are the facilities & service?',
     issues: [
       ['no_washing_machine', 'Washing machine issues'], ['no_fridge', 'No / broken fridge'], ['no_parking', 'No parking'],
@@ -25,7 +25,7 @@ export const PILLARS = [
     ],
   },
   {
-    key: 'security', label: 'Security', icon: '🔒', color: '#B42318',
+    key: 'security', positives: [['safe_women', 'Safe for women'], ['cctv_works', 'CCTV works'], ['guard_present', 'Guard at gate'], ['safe_area', 'Safe area'], ['secure_entry', 'Secure entry / locks']], label: 'Security', icon: '🔒', color: '#B42318',
     question: 'How safe do you feel?',
     issues: [
       ['unsafe_women', 'Not safe for women'], ['cctv_broken', 'CCTV not working'], ['unsafe_area', 'Area feels unsafe'],
@@ -33,7 +33,8 @@ export const PILLARS = [
     ],
   },
 ]
-export const ISSUE_LABEL = Object.fromEntries(PILLARS.flatMap(p => p.issues))
+export const ISSUE_LABEL = Object.fromEntries(PILLARS.flatMap(p => [...p.issues, ...p.positives]))
+export const POSITIVE = new Set(PILLARS.flatMap(p => p.positives.map(([k]) => k)))
 
 export const AMENITIES = [
   ['wifi', 'Wi-Fi'], ['ac', 'AC'], ['ro_water', 'RO water'], ['washing_machine', 'Washing machine'], ['fridge', 'Fridge'],

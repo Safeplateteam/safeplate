@@ -332,3 +332,9 @@ button, .chip, .action, .pick { touch-action: manipulation; }
 .landing-hero, .login-hero { padding-top: max(48px, calc(env(safe-area-inset-top) + 24px)); }
 .back-btn { top: max(14px, calc(env(safe-area-inset-top) + 8px)); }
 .leaflet-control-attribution { margin-bottom: env(safe-area-inset-bottom) !important; }
+
+.issue.good { background: var(--green-soft); color: var(--green); }
+.chip.on.good { background: var(--green-2); border-color: var(--green-2); }
+.good-label { color: var(--green-2) !important; font-weight: 700; margin-top: 4px; }
+.bad-label { color: var(--red) !important; font-weight: 700; margin-top: 10px; }
+.other-input { margin-top: 8px; padding: 10px 12px; font-size: 14px; }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { admin, uploadPhoto } from '../lib/api.js'
-import { PILLARS, AMENITIES, CHECKLIST, ISSUE_LABEL } from '../lib/constants.js'
+import { PILLARS, AMENITIES, CHECKLIST, ISSUE_LABEL, POSITIVE } from '../lib/constants.js'
 import { VerifiedBadge, Toast, timeAgo } from '../components/ui.jsx'
 import { go } from '../App.jsx'
 
@@ -38,7 +38,9 @@ export default function Admin({ pgs, refresh }) {
   if (edit) return <PgEditor pass={pass} pg={edit} onClose={async (saved) => { setEdit(null); if (saved) { await refresh(); await load(); flash('Saved ✓') } }} />
 
   const helpedTotal = dash.helped_yes + dash.helped_no
-  const issues = Object.entries(dash.issue_counts || {}).sort((a, b) => b[1] - a[1])
+  const allTags = Object.entries(dash.issue_counts || {}).sort((a, b) => b[1] - a[1])
+  const issues = allTags.filter(([k]) => !POSITIVE.has(k))
+  const goods = allTags.filter(([k]) => POSITIVE.has(k))
   const t = q.toLowerCase()
 
   return (
@@ -65,6 +67,11 @@ export default function Admin({ pgs, refresh }) {
           {issues.length === 0 && <p className="muted">No reviews yet.</p>}
           {issues.map(([k, n]) => (
             <div key={k} className="issue-row"><span>{ISSUE_LABEL[k] || k}</span><div className="bar"><div className="bar-fill" style={{ width: (100 * n / issues[0][1]) + '%', background: '#B42318' }} /></div><b>{n}</b></div>
+          ))}
+          <h3>What residents like</h3>
+          {goods.length === 0 && <p className="muted">No positives tagged yet.</p>}
+          {goods.map(([k, n]) => (
+            <div key={k} className="issue-row"><span>{ISSUE_LABEL[k] || k}</span><div className="bar"><div className="bar-fill" style={{ width: (100 * n / goods[0][1]) + '%', background: '#0E7C66' }} /></div><b>{n}</b></div>
           ))}
           <p className="muted small">Tip: these numbers are your “grading” evidence — which share of problems are food vs hygiene vs amenities vs security.</p>
         </div>

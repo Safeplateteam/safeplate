@@ -8,7 +8,7 @@ const LABELS = ['', 'Very bad', 'Bad', 'Okay', 'Good', 'Excellent']
 
 export default function ReviewForm({ pg, pgs, code, onDone }) {
   const [pick, setPick] = useState('')
-  const [r, setR] = useState({ food: 0, hygiene: 0, amenities: 0, security: 0, issues: [], comment: '', name: '', phone: '', months_stayed: '' })
+  const [r, setR] = useState({ food: 0, hygiene: 0, amenities: 0, security: 0, issues: [], comment: '', name: '', phone: '', months_stayed: '', notes: {} })
   const [photos, setPhotos] = useState([])
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -88,7 +88,7 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
       await submitReview({
         pg_id: pg.id, qr: code || null, name: r.name.trim(), phone: EMAIL_OTP ? null : r.phone.replace(/\D/g, '').slice(-10),
         food: r.food, hygiene: r.hygiene, amenities: r.amenities, security: r.security,
-        issues: r.issues, comment: r.comment.trim() || null, photos, months_stayed: r.months_stayed ? Number(r.months_stayed) : null,
+        issues: r.issues, comment: [r.comment.trim(), ...PILLARS.filter(p => (r.notes?.[p.key] || '').trim()).map(p => `${p.icon} ${p.label}: ${r.notes[p.key].trim()}`)].filter(Boolean).join('\n').slice(0, 800) || null, photos, months_stayed: r.months_stayed ? Number(r.months_stayed) : null,
       })
       track('review_submit', pg.id, { qr: !!code, photos: photos.length, issues: r.issues.length })
       try { localStorage.removeItem(draftKey) } catch {}
@@ -112,12 +112,24 @@ export default function ReviewForm({ pg, pgs, code, onDone }) {
             <StarsInput value={r[p.key]} onChange={v => set(p.key, v)} />
             <div className="rate-label">{LABELS[r[p.key]] || 'Tap to rate'}</div>
             <div className="issue-pick">
-              <small>Any problems? (tap all that apply)</small>
+              <small className="good-label">👍 What's good?</small>
+              <div>
+                {p.positives.map(([k, l]) => (
+                  <button type="button" key={k} className={'chip small' + (r.issues.includes(k) ? ' on good' : '')} onClick={() => toggleIssue(k)}>{l}</button>
+                ))}
+              </div>
+              <small className="bad-label">👎 Any problems?</small>
               <div>
                 {p.issues.map(([k, l]) => (
                   <button type="button" key={k} className={'chip small' + (r.issues.includes(k) ? ' on bad' : '')} onClick={() => toggleIssue(k)}>{l}</button>
                 ))}
+                <button type="button" className={'chip small' + (r.notes?.[p.key] != null ? ' on' : '')}
+                  onClick={() => set('notes', { ...(r.notes || {}), [p.key]: r.notes?.[p.key] != null ? undefined : '' })}>✏️ Other</button>
               </div>
+              {r.notes?.[p.key] != null && (
+                <input className="input other-input" maxLength={200} autoFocus placeholder={`Write about the ${p.label.toLowerCase()}…`}
+                  value={r.notes[p.key]} onChange={e => set('notes', { ...r.notes, [p.key]: e.target.value })} />
+              )}
             </div>
           </div>
         ))}

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { loadPgDetail, requestVisit, sendFeedback, track } from '../lib/api.js'
-import { PILLARS, ISSUE_LABEL, AMENITY_LABEL, CHECKLIST, GENDER_LABEL, rentText, scoreColor } from '../lib/constants.js'
+import { PILLARS, ISSUE_LABEL, POSITIVE, AMENITY_LABEL, CHECKLIST, GENDER_LABEL, rentText, scoreColor } from '../lib/constants.js'
 import { Gallery, VerifiedBadge, UnverifiedBadge, ScorePill, Bar, Stars, Sheet, Toast, timeAgo } from '../components/ui.jsx'
 import MapView from '../components/MapView.jsx'
 import { go, goBack } from '../App.jsx'
@@ -52,7 +52,7 @@ export default function PGDetail({ pg, loading }) {
             </div>
             {PILLARS.map(p => {
               const v = s[p.key] ?? pg['audit_' + p.key]
-              const flagged = p.issues.filter(([k]) => issueCounts[k]).sort((a, b) => issueCounts[b[0]] - issueCounts[a[0]])
+              const flagged = [...p.positives, ...p.issues].filter(([k]) => issueCounts[k]).sort((a, b) => issueCounts[b[0]] - issueCounts[a[0]])
               return (
                 <div key={p.key} className="pillar">
                   <div className="pillar-row">
@@ -62,7 +62,7 @@ export default function PGDetail({ pg, loading }) {
                   </div>
                   {flagged.length > 0 && (
                     <div className="issue-tags">
-                      {flagged.map(([k, l]) => <span key={k} className="issue">{l} · {issueCounts[k]}</span>)}
+                      {flagged.map(([k, l]) => <span key={k} className={'issue' + (POSITIVE.has(k) ? ' good' : '')}>{POSITIVE.has(k) ? '👍 ' : ''}{l} · {issueCounts[k]}</span>)}
                     </div>
                   )}
                 </div>
@@ -116,8 +116,8 @@ export default function PGDetail({ pg, loading }) {
               <div className="review-scores">
                 {PILLARS.map(p => <span key={p.key}>{p.icon} {r[p.key]}</span>)}
               </div>
-              {r.issues?.length > 0 && <div className="issue-tags">{r.issues.map(i => <span key={i} className="issue">{ISSUE_LABEL[i] || i}</span>)}</div>}
-              {r.comment && <p>{r.comment}</p>}
+              {r.issues?.length > 0 && <div className="issue-tags">{[...r.issues].sort((a, b) => POSITIVE.has(b) - POSITIVE.has(a)).map(i => <span key={i} className={'issue' + (POSITIVE.has(i) ? ' good' : '')}>{ISSUE_LABEL[i] || i}</span>)}</div>}
+              {r.comment && <p className="pre">{r.comment}</p>}
               {r.photos?.length > 0 && <div className="thumbs">{r.photos.map(u => <img key={u} src={u} alt="" />)}</div>}
             </div>
           ))}
