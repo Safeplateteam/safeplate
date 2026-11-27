@@ -2,6 +2,13 @@
   "appId": "in.safeplate.app",
   "appName": "SafePlate",
   "webDir": "dist",
-  "android": { "allowMixedContent": false },
-  "server": { "androidScheme": "https" }
+  "backgroundColor": "#F7F8FA",
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "force"
+  },
+  "server": { "androidScheme": "https" },
+  "plugins": {
+    "StatusBar": { "overlaysWebView": false, "style": "LIGHT", "backgroundColor": "#F7F8FA" }
+  }
 }

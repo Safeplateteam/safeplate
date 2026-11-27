@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { App as NativeApp } from '@capacitor/app'
+import { StatusBar, Style } from '@capacitor/status-bar'
 import { loadPgs, track, currentUser, signOutEmail } from './lib/api.js'
 import { popBack } from './lib/back.js'
 import Login from './components/Login.jsx'
@@ -75,6 +76,14 @@ export default function App() {
   useEffect(() => {
     if (entered && !['admin', 'poster'].includes(route.name)) saveSpot(window.location.hash || '#/')
   }, [route, entered])
+
+  // keep the app below Android's status bar, with dark icons on our light background
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {})
+    StatusBar.setStyle({ style: Style.Light }).catch(() => {})
+    StatusBar.setBackgroundColor({ color: '#F7F8FA' }).catch(() => {})
+  }, [])
 
   // Android hardware back button
   const state = useRef({})

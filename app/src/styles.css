@@ -325,3 +325,10 @@ button, .chip, .action, .pick { touch-action: manipulation; }
 .map-card .card { grid-template-columns: 110px 1fr; }
 .map-card-x { position: absolute; top: -12px; right: -6px; z-index: 6; width: 30px; height: 30px; border-radius: 50%; border: 0; background: #fff; box-shadow: var(--shadow); font-size: 13px; }
 .legend { pointer-events: none; }
+
+/* safety net for phones that still draw under the status / navigation bars */
+.top { padding-top: max(12px, env(safe-area-inset-top)); }
+.home.map-mode { padding-bottom: env(safe-area-inset-bottom); }
+.landing-hero, .login-hero { padding-top: max(48px, calc(env(safe-area-inset-top) + 24px)); }
+.back-btn { top: max(14px, calc(env(safe-area-inset-top) + 8px)); }
+.leaflet-control-attribution { margin-bottom: env(safe-area-inset-bottom) !important; }

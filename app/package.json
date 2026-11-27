@@ -9,6 +9,7 @@
   "dependencies": {
     "@capacitor/app": "^7.1.2",
     "@capacitor/core": "^7.6.11",
+    "@capacitor/status-bar": "^7.0.6",
     "@supabase/supabase-js": "^2.119.1",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
