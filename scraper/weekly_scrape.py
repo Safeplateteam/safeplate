@@ -20,7 +20,8 @@ TOKEN = os.environ.get("APIFY_TOKEN", "").strip()
 KEY = os.environ.get("SCRAPER_KEY", "").strip()
 MAX_AREAS = int(os.environ.get("MAX_AREAS", "40"))
 DRY = os.environ.get("DRY_RUN") == "1"
-FREE_CREDIT = float(os.environ.get("MONTHLY_BUDGET_USD", "5"))  # Apify free plan credit; never plan beyond it
+FREE_CREDIT = float(os.environ.get("MONTHLY_BUDGET_USD", "5"))
+RUN_BUDGET = float(os.environ.get("RUN_BUDGET_USD") or 0)  # optional: spend up to this much in this run (manual runs)  # Apify free plan credit; never plan beyond it
 
 GURGAON = (28.33, 28.57, 76.88, 77.17)  # lat min/max, lng min/max
 PG_WORDS = re.compile(r"\b(pg|p\.g|paying guest|hostel|co-?living|coliving|stay|stays|homestay|dorm|dormitory|"
@@ -172,6 +173,8 @@ def main():
     remaining = limit - used
     weeks_left = max(1, math.ceil(days_left / 7))
     budget = remaining / weeks_left
+    if RUN_BUDGET > 0:
+        budget = min(RUN_BUDGET, remaining - 0.05)
     print(f"Apify credit: ${used:.2f} used of ${limit:.2f} · {days_left} days left in cycle · this run's budget ${budget:.2f}")
     if remaining < 0.10:
         print("Free credit used up for this month. Stopping until the next cycle."); return

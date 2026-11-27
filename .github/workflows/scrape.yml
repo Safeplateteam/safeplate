@@ -6,6 +6,7 @@ on:
     inputs:
       max_areas: { description: 'Max areas this run', default: '40' }
       dry_run:   { description: 'Dry run (plan only, no scraping)', type: boolean, default: false }
+      run_budget: { description: 'Spend up to $ now (blank = spread over the month)', default: '' }
 concurrency: { group: scrape, cancel-in-progress: false }
 jobs:
   scrape:
@@ -21,3 +22,4 @@ jobs:
           SCRAPER_KEY: ${{ secrets.SCRAPER_KEY }}
           MAX_AREAS: ${{ inputs.max_areas || '40' }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          RUN_BUDGET_USD: ${{ inputs.run_budget }}
